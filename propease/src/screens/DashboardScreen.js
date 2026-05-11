@@ -6,29 +6,35 @@ import {
 } from 'react-native';
 import { theme } from '../data/theme';
 import { getCustomers, getRentRecords, getMaintenanceRequests, getWorkOrders } from '../data/propertyStore';
+import { getCurrentUser } from '../navigation/AppNavigator';
+import { Auth } from '../../App';
 
-export default function DashboardScreen({ navigation, route }) {
+export default function DashboardScreen({ navigation }) {
   const [tick, setTick] = React.useState(0);
   useFocusEffect(useCallback(() => { setTick(t => t + 1); }, []));
-  const user = route?.params?.user;
-  const userName = user?.name || 'Manager';
-  const userInitials = userName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const customers     = getCustomers();
+  const user         = getCurrentUser();
+  const userName     = user?.name || 'Manager';
+  const userInitials = userName !== 'Manager'
+    ? userName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : '👤';
+
+  const customers   = getCustomers();
   const rentRecords = getRentRecords();
   const maintenance = getMaintenanceRequests();
-
-  const collected   = rentRecords.filter(r => r.status === 'paid').reduce((s, r) => s + r.amount, 0);
-  const pending     = rentRecords.filter(r => r.status !== 'paid').reduce((s, r) => s + r.amount, 0);
-  const overdue     = rentRecords.filter(r => r.status === 'overdue');
-  const openMaint   = maintenance.filter(m => m.status !== 'resolved');
   const workOrders  = getWorkOrders();
-  const openWO      = workOrders.filter(w => w.status === 'open' || w.status === 'in-progress');
+
+  const collected = rentRecords.filter(r => r.status === 'paid').reduce((s, r) => s + r.amount, 0);
+  const pending   = rentRecords.filter(r => r.status !== 'paid').reduce((s, r) => s + r.amount, 0);
+  const overdue   = rentRecords.filter(r => r.status === 'overdue');
+  const openWO    = workOrders.filter(w => w.status === 'open' || w.status === 'in-progress');
+
+  const doLogout = () => { if (Auth.logout) Auth.logout(); };
 
   const handleLogout = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => (navigation.getParent() || navigation).reset({ index: 0, routes: [{ name: 'Landing' }] }) },
+      { text: 'Log Out', style: 'destructive', onPress: doLogout },
     ]);
   };
 
@@ -36,7 +42,6 @@ export default function DashboardScreen({ navigation, route }) {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary} />
 
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Management Portal</Text>
@@ -52,7 +57,6 @@ export default function DashboardScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Rent Summary */}
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: theme.colors.success }]}>
           <Text style={styles.summaryLabel}>Collected</Text>
@@ -64,12 +68,11 @@ export default function DashboardScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Stats */}
       <View style={styles.statsRow}>
         {[
           { icon: '👥', label: 'Customers',   value: customers.length },
           { icon: '💰', label: 'Rent Due',    value: rentRecords.filter(r => r.status !== 'paid').length },
-          { icon: '📋', label: 'Work Orders',  value: openWO.length },
+          { icon: '📋', label: 'Work Orders', value: openWO.length },
           { icon: '🚨', label: 'Overdue',     value: overdue.length },
         ].map(s => (
           <View style={styles.statCard} key={s.label}>
@@ -80,15 +83,14 @@ export default function DashboardScreen({ navigation, route }) {
         ))}
       </View>
 
-      {/* Quick Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
           {[
-            { label: 'Customers',      icon: '👥', screen: 'Customers' },
-            { label: 'Rent',           icon: '💰', screen: 'Rent' },
-            { label: 'Work Orders',    icon: '📋', screen: 'Work Orders' },
-            { label: 'Contact',        icon: '📞', screen: 'Contact' },
+            { label: 'Customers',   icon: '👥', screen: 'Customers' },
+            { label: 'Rent',        icon: '💰', screen: 'Rent' },
+            { label: 'Work Orders', icon: '📋', screen: 'Work Orders' },
+            { label: 'Contact',     icon: '📞', screen: 'Contact' },
           ].map(a => (
             <TouchableOpacity style={styles.actionBtn} key={a.label} onPress={() => navigation.navigate(a.screen)}>
               <Text style={styles.actionIcon}>{a.icon}</Text>
@@ -98,14 +100,13 @@ export default function DashboardScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Overdue Rent Alerts */}
       {overdue.length > 0 && (
         <View style={styles.alertCard}>
           <Text style={styles.alertTitle}>🚨 Overdue Rent</Text>
           {overdue.map(r => (
             <View style={styles.alertRow} key={r.id}>
-              <Text style={styles.alertName}>{r.customerName} — {r.unit}</Text>
-              <Text style={styles.alertAmount}>₹{r.amount.toLocaleString('en-IN')}</Text>
+              <Text style={styles.alertName}>{r.renterName || r.customerName} — {r.unit}</Text>
+              <Text style={styles.alertAmount}>₹{(r.amount || 0).toLocaleString('en-IN')}</Text>
             </View>
           ))}
           <TouchableOpacity onPress={() => navigation.navigate('Rent')}>
@@ -114,14 +115,13 @@ export default function DashboardScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Empty state */}
       {customers.length === 0 && (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>🏠</Text>
           <Text style={styles.emptyTitle}>No customers yet</Text>
           <Text style={styles.emptyDesc}>Add your first customer to get started.</Text>
           <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('Customers')}>
-            <Text style={styles.emptyBtnText}>Add Customer →</Text>
+            <Text style={styles.emptyBtnText}>Go to Customers →</Text>
           </TouchableOpacity>
         </View>
       )}

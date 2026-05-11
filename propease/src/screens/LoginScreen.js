@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { theme } from '../data/theme';
 import { findAccount } from '../data/accountStore';
+import { loginAsCustomer } from '../navigation/AppNavigator';
 
 const COUNTRY_CODES = [
   { code: '+91', flag: '🇮🇳', label: 'India', maxLen: 10, placeholder: '9876543210' },
@@ -66,7 +67,7 @@ export default function LoginScreen({ navigation }) {
       setRoleError('This is the Customer Login. Management staff must use the Management Portal.');
       return;
     }
-    navigation.reset({ index: 0, routes: [{ name: 'CustomerTabs', params: { customerId: account.customerId, role: 'customer' } }] });
+    loginAsCustomer(account.id);
   };
 
   return (
