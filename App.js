@@ -9,7 +9,6 @@ import { initAccountStore } from './src/data/accountStore';
 import { theme } from './src/data/theme';
 
 import LandingScreen         from './src/screens/LandingScreen';
-import SignupScreen          from './src/screens/SignupScreen';
 import LoginScreen           from './src/screens/LoginScreen';
 import ManagementLoginScreen from './src/screens/ManagementLoginScreen';
 import DashboardScreen       from './src/screens/DashboardScreen';
@@ -17,7 +16,8 @@ import CustomersScreen       from './src/screens/CustomersScreen';
 import RentScreen            from './src/screens/RentScreen';
 import WorkOrdersScreen      from './src/screens/WorkOrdersScreen';
 import ContactScreen         from './src/screens/ContactScreen';
-import CustomerPortalScreen  from './src/screens/CustomerPortalScreen';
+import OwnerPortalScreen     from './src/screens/OwnerPortalScreen';
+import TenantPortalScreen    from './src/screens/TenantPortalScreen';
 
 initAccountStore();
 
@@ -63,13 +63,18 @@ export default function App() {
     );
   }
 
-  if (auth?.role === 'customer') {
+  if (auth?.role === 'owner') {
     return (
-      <View style={{ flex:1 }}>
-        <CustomerPortalScreen
-          navigation={{ reset: () => setAuth(null), goBack: () => setAuth(null) }}
-          route={{ params: { renterId: auth.renterId } }}
-        />
+      <View style={{ flex: 1 }}>
+        <OwnerPortalScreen />
+      </View>
+    );
+  }
+
+  if (auth?.role === 'tenant') {
+    return (
+      <View style={{ flex: 1 }}>
+        <TenantPortalScreen />
       </View>
     );
   }
@@ -78,7 +83,6 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Landing"      component={LandingScreen} />
-        <Stack.Screen name="Signup"       component={SignupScreen} />
         <Stack.Screen name="Login"        component={LoginScreen} />
         <Stack.Screen name="ManagerLogin" component={ManagementLoginScreen} />
       </Stack.Navigator>

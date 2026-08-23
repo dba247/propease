@@ -6,14 +6,21 @@ import {
 } from 'react-native';
 import { theme } from '../data/theme';
 import { findAccount } from '../data/accountStore';
-import { loginAsCustomer } from '../navigation/AppNavigator';
+import { loginAsOwner, loginAsTenant } from '../navigation/AppNavigator';
 
 const COUNTRY_CODES = [
   { code: '+91', flag: '🇮🇳', label: 'India', maxLen: 10, placeholder: '9876543210' },
   { code: '+1',  flag: '🇺🇸', label: 'US',    maxLen: 10, placeholder: '4155550100' },
 ];
 
-export default function LoginScreen({ navigation }) {
+const ROLE_COPY = {
+  owner:  { title: 'Property Owner Login', sub: 'Sign in to view your properties and tenants' },
+  tenant: { title: 'Tenant Login',         sub: 'Sign in to view your rent and report issues' },
+};
+
+export default function LoginScreen({ navigation, route }) {
+  const role = route?.params?.role === 'tenant' ? 'tenant' : 'owner';
+  const copy = ROLE_COPY[role];
   const [loginMode, setLoginMode] = useState('phone');
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -51,8 +58,8 @@ export default function LoginScreen({ navigation }) {
     if (!found) {
       setIdentifierError(
         loginMode === 'phone'
-          ? `No account found for ${selectedCountry.code} ${identifier}. Please create an account first.`
-          : `No account found for "${identifier.trim()}". Please create an account first.`
+          ? `No account found for ${selectedCountry.code} ${identifier}. Contact your property manager for access.`
+          : `No account found for "${identifier.trim()}". Contact your property manager for access.`
       );
       return;
     }
@@ -62,12 +69,15 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
-    // Block managers — they must use the management portal
-    if (account.role === 'manager') {
-      setRoleError('This is the Customer Login. Management staff must use the Management Portal.');
+    // Make sure the account matches the login role selected on this screen
+    if (account.role !== role) {
+      const roleLabel = { manager: 'Property Management', owner: 'Property Owner', tenant: 'Tenant' }[account.role] || account.role;
+      setRoleError(`This account is registered as ${roleLabel}. Please use the ${roleLabel} login instead.`);
       return;
     }
-    loginAsCustomer(account.id);
+
+    if (role === 'owner') loginAsOwner(account);
+    else loginAsTenant(account);
   };
 
   return (
@@ -83,8 +93,8 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.logo}>🏠</Text>
-          <Text style={styles.headerTitle}>Welcome Back</Text>
-          <Text style={styles.headerSub}>Customer Login</Text>
+          <Text style={styles.headerTitle}>{copy.title}</Text>
+          <Text style={styles.headerSub}>{copy.sub}</Text>
         </View>
 
         <View style={styles.form}>
@@ -147,11 +157,6 @@ export default function LoginScreen({ navigation }) {
               {identifierError ? (
                 <View style={styles.errorBox}>
                   <Text style={styles.errorText}>⚠️  {identifierError}</Text>
-                  {identifierError.includes('create an account') && (
-                    <TouchableOpacity onPress={() => navigation.navigate('Signup')} style={styles.errorSignupBtn}>
-                      <Text style={styles.errorSignupBtnText}>Create Free Account →</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               ) : null}
             </View>
@@ -174,11 +179,6 @@ export default function LoginScreen({ navigation }) {
               {identifierError ? (
                 <View style={styles.errorBox}>
                   <Text style={styles.errorText}>⚠️  {identifierError}</Text>
-                  {identifierError.includes('create an account') && (
-                    <TouchableOpacity onPress={() => navigation.navigate('Signup')} style={styles.errorSignupBtn}>
-                      <Text style={styles.errorSignupBtnText}>Create Free Account →</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               ) : null}
             </View>

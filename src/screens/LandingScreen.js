@@ -13,17 +13,14 @@ export default function LandingScreen({ navigation }) {
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.btnPrimary} onPress={() => navigation.navigate('Signup')}>
-          <Text style={styles.btnPrimaryText}>Create Account</Text>
+        <TouchableOpacity style={styles.btnPrimary} onPress={() => navigation.navigate('Login', { role: 'owner' })}>
+          <Text style={styles.btnPrimaryText}>Property Owner Login</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.btnSecondaryText}>Customer Login</Text>
+        <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('Login', { role: 'tenant' })}>
+          <Text style={styles.btnSecondaryText}>Tenant Login</Text>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={() => navigation.navigate('ManagerLogin')}>
-          <Text style={styles.mgmtLink}>Management Login</Text>
+        <TouchableOpacity style={styles.btnTertiary} onPress={() => navigation.navigate('ManagerLogin')}>
+          <Text style={styles.btnTertiaryText}>Property Management Login</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -48,6 +45,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   btnSecondaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  footer: { alignItems: 'center', paddingBottom: 32 },
-  mgmtLink: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
+  btnTertiary: {
+    borderRadius: theme.radius.lg, paddingVertical: 14, alignItems: 'center',
+  },
+  btnTertiaryText: { color: 'rgba(255,255,255,0.6)', fontWeight: '700', fontSize: 14 },
 });

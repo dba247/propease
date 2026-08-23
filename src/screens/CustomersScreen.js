@@ -18,6 +18,7 @@ import {
   getRentersByCustomer, addRenter,
   getRentByRenter, markRentPaid, addRentRecord,
 } from '../data/propertyStore';
+import { createOwnerAccount, createTenantAccount } from '../data/accountStore';
 
 // ─── Helpers ─────────────────────────────────────────────────
 function getOrdinal(n) {
@@ -73,7 +74,7 @@ const f = StyleSheet.create({
 
 // ─── Add Customer Modal ───────────────────────────────────────
 function AddCustomerModal({ visible, onClose, onAdded }) {
-  const [form, setForm] = useState({ name:'', mobile:'', email:'', address:'' });
+  const [form, setForm] = useState({ name:'', mobile:'', email:'', address:'', password:'' });
   const [saving, setSaving] = useState(false);
   const set = (k,v) => setForm(p => ({...p,[k]:v}));
 
@@ -82,10 +83,29 @@ function AddCustomerModal({ visible, onClose, onAdded }) {
       Alert.alert('Required', 'Please enter customer name and mobile number.');
       return;
     }
+    if (!form.email.trim()) {
+      Alert.alert('Required', 'Please enter an email — the owner will use it to log in.');
+      return;
+    }
+    if (!form.password.trim() || form.password.trim().length < 6) {
+      Alert.alert('Required', 'Please set a login password (at least 6 characters) for this owner.');
+      return;
+    }
     setSaving(true);
     try {
-      const customer = await addCustomer(form);
-      setForm({ name:'', mobile:'', email:'', address:'' });
+      const customer = await addCustomer({
+        name: form.name.trim(), mobile: form.mobile.trim(),
+        email: form.email.trim(), address: form.address.trim(),
+      });
+      const acct = await createOwnerAccount({
+        name: form.name.trim(), mobile: form.mobile.trim(), countryCode: '+91',
+        email: form.email.trim(), password: form.password.trim(),
+        customerId: customer.id,
+      });
+      if (!acct.success) {
+        Alert.alert('Owner Saved, Login Not Created', acct.error || 'Could not create a login for this owner. You can retry from their profile later.');
+      }
+      setForm({ name:'', mobile:'', email:'', address:'', password:'' });
       onAdded(customer);
       onClose();
     } catch (e) {
@@ -108,8 +128,10 @@ function AddCustomerModal({ visible, onClose, onAdded }) {
         <ScrollView contentContainerStyle={s.modalBody}>
           <Field label="Full Name *"     value={form.name}    onChangeText={v=>set('name',v)}    placeholder="Suresh Mehta" />
           <Field label="Mobile *"        value={form.mobile}  onChangeText={v=>set('mobile',v)}  placeholder="9876543210" keyboard="phone-pad" maxLength={15} />
-          <Field label="Email"           value={form.email}   onChangeText={v=>set('email',v)}   placeholder="suresh@email.com" keyboard="email-address" />
+          <Field label="Email *"         value={form.email}   onChangeText={v=>set('email',v)}   placeholder="suresh@email.com" keyboard="email-address" />
           <Field label="Customer Address" value={form.address} onChangeText={v=>set('address',v)} placeholder="Customer's own address" multiline />
+          <Text style={s.modalSection}>🔑 Owner Login</Text>
+          <Field label="Set Login Password *" value={form.password} onChangeText={v=>set('password',v)} placeholder="At least 6 characters" />
           <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
             {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveBtnText}>Add Customer →</Text>}
           </TouchableOpacity>
@@ -123,7 +145,7 @@ function AddCustomerModal({ visible, onClose, onAdded }) {
 function AddTenantModal({ visible, customer, onClose, onAdded }) {
   const year = new Date().getFullYear();
   const [form, setForm] = useState({
-    name:'', mobile:'', email:'',
+    name:'', mobile:'', email:'', password:'',
     rentalAddress:'', unit:'',
     rentAmount:'', securityDeposit:'',
     leaseStart:'', leaseEnd:'', rentDueDate:'1',
@@ -134,6 +156,14 @@ function AddTenantModal({ visible, customer, onClose, onAdded }) {
   const handleSave = async () => {
     if (!form.name.trim() || !form.mobile.trim()) {
       Alert.alert('Required', 'Please enter tenant name and mobile number.');
+      return;
+    }
+    if (!form.email.trim()) {
+      Alert.alert('Required', 'Please enter an email — the tenant will use it to log in.');
+      return;
+    }
+    if (!form.password.trim() || form.password.trim().length < 6) {
+      Alert.alert('Required', 'Please set a login password (at least 6 characters) for this tenant.');
       return;
     }
     if (!form.rentAmount.trim()) {
@@ -162,7 +192,15 @@ function AddTenantModal({ visible, customer, onClose, onAdded }) {
         customerName:    customer.name,
         propertyId:      customer.id, // use customer id as property id for simplicity
       });
-      setForm({ name:'', mobile:'', email:'', rentalAddress:'', unit:'', rentAmount:'', securityDeposit:'', leaseStart:'', leaseEnd:'', rentDueDate:'1' });
+      const acct = await createTenantAccount({
+        name: form.name.trim(), mobile: form.mobile.trim(), countryCode: '+91',
+        email: form.email.trim(), password: form.password.trim(),
+        renterId: renter.id, customerId: customer.id,
+      });
+      if (!acct.success) {
+        Alert.alert('Tenant Saved, Login Not Created', acct.error || 'Could not create a login for this tenant. You can retry from their profile later.');
+      }
+      setForm({ name:'', mobile:'', email:'', password:'', rentalAddress:'', unit:'', rentAmount:'', securityDeposit:'', leaseStart:'', leaseEnd:'', rentDueDate:'1' });
       onAdded(renter);
       onClose();
     } catch (e) {
@@ -191,7 +229,10 @@ function AddTenantModal({ visible, customer, onClose, onAdded }) {
           <Text style={s.modalSection}>👤 Tenant Contact Info</Text>
           <Field label="Full Name *"     value={form.name}   onChangeText={v=>set('name',v)}   placeholder="Rahul Sharma" />
           <Field label="Mobile *"        value={form.mobile} onChangeText={v=>set('mobile',v)} placeholder="9876543210" keyboard="phone-pad" maxLength={15} />
-          <Field label="Email"           value={form.email}  onChangeText={v=>set('email',v)}  placeholder="rahul@gmail.com" keyboard="email-address" />
+          <Field label="Email *"         value={form.email}  onChangeText={v=>set('email',v)}  placeholder="rahul@gmail.com" keyboard="email-address" />
+
+          <Text style={s.modalSection}>🔑 Tenant Login</Text>
+          <Field label="Set Login Password *" value={form.password} onChangeText={v=>set('password',v)} placeholder="At least 6 characters" />
 
           <Text style={s.modalSection}>🏠 Rental Property</Text>
           <Field label="Rental Property Address *" value={form.rentalAddress} onChangeText={v=>set('rentalAddress',v)} placeholder="12, MG Road, Koramangala, Bangalore 560034" multiline />

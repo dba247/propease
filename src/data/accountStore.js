@@ -78,10 +78,12 @@ function hashPassword(plain) {
 }
 
 // ── Demo / seed accounts ──────────────────────────────────────
+// Roles: 'manager' (property management company staff — only one
+// company is supported), 'owner' (property owner / customer),
+// 'tenant' (renter). Owner and tenant accounts are created by the
+// manager from the Customers dashboard, not via self-signup.
 const DEMO_ACCOUNTS = [
   { id: 'demo_mgr_0',   email: 'propeasemgr@propease.in', password: 'admin123',  name: 'PropEase Manager', mobile: '9494154838', countryCode: '+1',  role: 'manager'  },
-  { id: 'demo_cust_0',  email: 'priya.verma@gmail.com',   password: 'priya123',  name: 'Priya Verma',      mobile: '9845678901', countryCode: '+91', role: 'customer' },
-  { id: 'demo_cust_1',  email: 'amit.patel@gmail.com',    password: 'amit123',   name: 'Amit Patel',       mobile: '9812345678', countryCode: '+91', role: 'customer' },
 ];
 
 // ── Public API (all async) ────────────────────────────────────
@@ -131,6 +133,26 @@ export async function initAccountStore() {
  * Returns { success: true } or { success: false, error: string }
  */
 export async function registerAccount({ name, mobile, countryCode, email, password }) {
+  return _createAccount({ name, mobile, countryCode, email, password, role: 'manager' });
+}
+
+/**
+ * Create a login for a property owner, linked to their customer record.
+ * Called by the manager from the Customers dashboard.
+ */
+export async function createOwnerAccount({ name, mobile, countryCode, email, password, customerId }) {
+  return _createAccount({ name, mobile, countryCode, email, password, role: 'owner', customerId });
+}
+
+/**
+ * Create a login for a tenant, linked to their renter + customer records.
+ * Called by the manager from the Customers dashboard.
+ */
+export async function createTenantAccount({ name, mobile, countryCode, email, password, renterId, customerId }) {
+  return _createAccount({ name, mobile, countryCode, email, password, role: 'tenant', renterId, customerId });
+}
+
+async function _createAccount({ name, mobile, countryCode, email, password, role, customerId, renterId }) {
   try {
     const emailLower = email ? email.toLowerCase().trim() : '';
     const col        = collection(db, ACCOUNTS);
@@ -155,20 +177,24 @@ export async function registerAccount({ name, mobile, countryCode, email, passwo
     }
 
     const id = 'user_' + Date.now();
-    await setDoc(doc(db, ACCOUNTS, id), {
+    const account = {
       id,
       name,
       mobile,
       countryCode,
       email: emailLower,
       passwordHash: hashPassword(password),
-      role: 'manager',
-    });
+      role,
+    };
+    if (customerId) account.customerId = customerId;
+    if (renterId)   account.renterId   = renterId;
 
-    return { success: true };
+    await setDoc(doc(db, ACCOUNTS, id), account);
+
+    return { success: true, account };
   } catch (e) {
-    console.error('[accountStore] registerAccount failed:', e);
-    return { success: false, error: 'Registration failed. Please check your connection.' };
+    console.error('[accountStore] _createAccount failed:', e);
+    return { success: false, error: 'Account creation failed. Please check your connection.' };
   }
 }
 
