@@ -29,7 +29,7 @@ const Tab   = createBottomTabNavigator();
 export const Auth = { login: null, logout: null, user: null };
 
 function ManagerTabs() {
-  const icons = { Dashboard:'🏠', Customers:'👥', Tenants:'🏘️', Rent:'💰', 'Work Orders':'📋', Contact:'📞' };
+  const icons = { Dashboard:'🏠', Customers:'👥', Tenants:'🏘️', Rent:'💰', 'Work Orders':'📋' };
   return (
     <Tab.Navigator screenOptions={({ route: r }) => ({
       tabBarIcon: () => <Text style={{ fontSize: 20 }}>{icons[r.name]}</Text>,
@@ -44,7 +44,6 @@ function ManagerTabs() {
       <Tab.Screen name="Tenants"     component={TenantsScreen} />
       <Tab.Screen name="Rent"        component={RentScreen} />
       <Tab.Screen name="Work Orders" component={WorkOrdersScreen} />
-      <Tab.Screen name="Contact"     component={ContactScreen} />
     </Tab.Navigator>
   );
 }
@@ -87,6 +86,7 @@ export default function App() {
         <Stack.Screen name="Landing"      component={LandingScreen} />
         <Stack.Screen name="Login"        component={LoginScreen} />
         <Stack.Screen name="ManagerLogin" component={ManagementLoginScreen} />
+        <Stack.Screen name="Contact"      component={ContactScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
